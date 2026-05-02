@@ -1,11 +1,13 @@
-import { useDebugValue } from "react";
-import { isEmail, isNotEmpty, isEqualToOtherValue, isMinLength, hasMinLength } from "../util/validation";
+import { useActionState } from "react";
+import {
+  isEmail,
+  isNotEmpty,
+  isEqualToOtherValue,
+  hasMinLength,
+} from "../util/validation";
 
 export default function Signup() {
-
-// il formData conterrà tutte le informazioni del form, con i nomi dei campi come chiavi e i valori inseriti dall'utente come valori
-  const signupAction = (formData) => {
-    // gli input vanno sempre nominati
+  const signupAction = (prevFormState, formData) => {
     const enteredEmail = formData.get("email");
     const enteredPassword = formData.get("password");
     const enteredConfirmPassword = formData.get("confirm-password");
@@ -13,40 +15,51 @@ export default function Signup() {
     const enteredLastName = formData.get("last-name");
     const selectedRole = formData.get("role");
     const acquisitionChannels = formData.getAll("acquisition");
+    const terms = formData.get("terms");
 
-    let error = [];
+    let errors = [];
 
-    if(isEmail(enteredEmail)) {
-      error.push('Invalid Email Address')
-    }
-    if(isNotEmpty(enteredPassword) || !hasMinLength(enteredPassword, 6)) {
-      error.push('Password cannot be empty')
-    }
-    if(!isEqualToOtherValue(enteredPassword, enteredConfirmPassword)) {
-      error.push('Passwords do not match')
-    }
-    if(!isNotEmpty(enteredFirstName) || !isNotEmpty(enteredLastName)  ) {
-      error.push('Please enter your first and last name')
+    if (!isEmail(enteredEmail)) {
+      errors.push("Invalid email address");
     }
 
-    if(!isNotEmpty(selectedRole)) {
-      error.push('Please select a role')
+    if (!isNotEmpty(enteredPassword) || !hasMinLength(enteredPassword, 6)) {
+      errors.push("Password must be at least 6 characters long");
     }
 
-    if(!terms){
-      error.push('You must agree to the terms and conditions')
+    if (!isEqualToOtherValue(enteredPassword, enteredConfirmPassword)) {
+      errors.push("Passwords do not match");
     }
 
-    if(acquisitionChannels.length === 0) {
-      error.push('Please select at least one acquisition channel')
+    if (!isNotEmpty(enteredFirstName) || !isNotEmpty(enteredLastName)) {
+      errors.push("Please enter your first and last name");
     }
 
-  }
+    if (!isNotEmpty(selectedRole)) {
+      errors.push("Please select a role");
+    }
 
+    if (!terms) {
+      errors.push("You must agree to the terms and conditions");
+    }
 
+    if (acquisitionChannels.length === 0) {
+      errors.push("Please select at least one acquisition channel");
+    }
+
+    if (errors.length > 0) {
+      return { errors };
+    }
+
+    return { errors: null };
+  };
+
+  const [formState, formAction, pending] = useActionState(signupAction, {
+    errors: null,
+  });
 
   return (
-    <form action={signupAction}>
+    <form action={formAction}>
       <h2>Welcome on board!</h2>
       <p>We just need a little bit of data from you to get you started 🚀</p>
 
@@ -86,8 +99,9 @@ export default function Signup() {
       </div>
 
       <div className="control">
-        <label htmlFor="phone">What best describes your role?</label>
+        <label htmlFor="role">What best describes your role?</label>
         <select id="role" name="role">
+          <option value="">Select a role</option>
           <option value="student">Student</option>
           <option value="teacher">Teacher</option>
           <option value="employee">Employee</option>
@@ -98,6 +112,7 @@ export default function Signup() {
 
       <fieldset>
         <legend>How did you find us?</legend>
+
         <div className="control">
           <input
             type="checkbox"
@@ -119,23 +134,38 @@ export default function Signup() {
         </div>
 
         <div className="control">
-          <input type="checkbox" id="other" name="acquisition" value="other" />
+          <input
+            type="checkbox"
+            id="other"
+            name="acquisition"
+            value="other"
+          />
           <label htmlFor="other">Other</label>
         </div>
       </fieldset>
 
       <div className="control">
         <label htmlFor="terms-and-conditions">
-          <input type="checkbox" id="terms-and-conditions" name="terms" />I
-          agree to the terms and conditions
+          <input type="checkbox" id="terms-and-conditions" name="terms" />
+          I agree to the terms and conditions
         </label>
       </div>
+
+      {formState.errors && (
+        <ul className="error">
+          {formState.errors.map((error, index) => (
+            <li key={index}>{error}</li>
+          ))}
+        </ul>
+      )}
 
       <p className="form-actions">
         <button type="reset" className="button button-flat">
           Reset
         </button>
-        <button className="button">Sign up</button>
+        <button className="button" disabled={pending}>
+          {pending ? "Submitting..." : "Sign up"}
+        </button>
       </p>
     </form>
   );
